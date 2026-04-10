@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  --color-neon-purple: #b026ff;
+  --color-neon-blue: #00f3ff;
+  --color-neon-pink: #f72585;
+  --color-dark-bg: #050505;
+  --color-glass-overlay: rgba(20, 20, 20, 0.7);
+  --color-glass-border: rgba(255, 255, 255, 0.1);
+  --color-text-primary: #e2e8f0;
+}
+
+:root {
+  background-color: var(--color-dark-bg);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(176, 38, 255, 0.1) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(0, 243, 255, 0.1) 0px, transparent 50%);
+  color: var(--color-text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* Utilities cho hiệu ứng Luxury Neon Kính (Glassmorphism) */
+.glass-panel {
+  background: var(--color-glass-overlay);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+  border-radius: 1.5rem;
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-neon-blue), var(--color-neon-purple));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
