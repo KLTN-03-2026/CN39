@@ -1,44 +1,60 @@
-import { GoogleGenerativeAI, FunctionDeclaration, SchemaType, ChatSession } from '@google/generative-ai';
+import { GoogleGenAI, Type } from '@google/genai';
 import { databaseMongoClient } from '~/services/database.services';
 import Roadmap from '~/models/schemas/Roadmap.schema';
 import { ObjectId } from 'mongodb';
 
 // 1. Khai báo Function Tool cho Gemini (Agent Action)
-const generateSkillTreeDeclaration: FunctionDeclaration = {
+const generateSkillTreeDeclaration: any = {
   name: "generateSkillTree",
-  description: "Trình kích hoạt hành động! Gọi CÔNG CỤ NÀY khi mục đích của ứng viên là yêu cầu CẤP hoặc VẼ MỘT LỘ TRÌNH mới. Bạn phải đẩy đủ dữ liệu lộ trình vào đây.",
+  description: "Trình kích hoạt hành động! Gọi CÔNG CỤ NÀY để vẽ Bản đồ Lộ trình (Roadmap) dựa trên Khoảng trống kỹ năng. TUYỆT ĐỐI KHÔNG vẽ các kỹ năng cơ bản mà User đã biết. CHỈ VẼ CÁC KỸ NĂNG CÒN THIẾU (ADVANCED SKILLS).",
   parameters: {
-    type: SchemaType.OBJECT,
+    type: Type.OBJECT,
     properties: {
-      targetRole: { type: SchemaType.STRING, description: "Vị trí ứng viên nhắm tới" },
-      level: { type: SchemaType.STRING, description: "Trình độ đánh giá (Ví dụ: Intern, Fresher)" },
+      targetRole: { type: Type.STRING, description: "Vị trí ứng viên nhắm tới" },
+      level: { type: Type.STRING, description: "Trình độ đánh giá (Ví dụ: Intern, Fresher)" },
       phases: {
-        type: SchemaType.ARRAY,
+        type: Type.ARRAY,
+        description: "Mảng danh sách TOÀN BỘ các Nhánh học nâng cao CÒN THIẾU. Sinh từ 6 đến 15 nhánh tuỳ theo độ khó của mục tiêu.",
         items: {
-          type: SchemaType.OBJECT,
+          type: Type.OBJECT,
           properties: {
-            phaseName: { type: SchemaType.STRING },
-            duration: { type: SchemaType.STRING },
-            topics: {
-              type: SchemaType.ARRAY,
+            phaseName: { type: Type.STRING, description: "Tên Bài học chính (VD: Internet, HTML, CSS)" },
+            duration: { type: Type.STRING },
+            description: { type: Type.STRING, description: "Giải thích chi tiết về mốc bài học chính này" },
+            isCompleted: { type: Type.BOOLEAN, description: "Luôn đặt false vì lộ trình này CHỈ chứa các kiến thức user CÒN THIẾT và CHƯA BIẾT." },
+            resources: {
+              type: Type.ARRAY,
+              description: "Tài nguyên học tập cho Bài học chính này",
               items: {
-                type: SchemaType.OBJECT,
+                type: Type.OBJECT,
                 properties: {
-                  topicId: { type: SchemaType.STRING },
-                  title: { type: SchemaType.STRING },
-                  description: { type: SchemaType.STRING },
-                  isCompleted: { type: SchemaType.BOOLEAN },
-                  isRequired: { type: SchemaType.BOOLEAN, description: "true = Khuyến nghị bắt buộc, false = Tuỳ chọn bổ sung" },
+                  type: { type: Type.STRING },
+                  url: { type: Type.STRING },
+                  label: { type: Type.STRING },
+                  isPremium: { type: Type.BOOLEAN }
+                }
+              }
+            },
+            topics: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  topicId: { type: Type.STRING, description: "ID độc nhất (tiếng anh không dấu, vd: react-js, css-grid)" },
+                  title: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  isCompleted: { type: Type.BOOLEAN, description: "Luôn đặt false vì lộ trình ngầm định đã cắt bỏ kiến thức cũ, phần này chỉ toàn kiến thức cần học." },
+                  isRequired: { type: Type.BOOLEAN, description: "true = Khuyến nghị bắt buộc (Khung chuẩn), false = Tuỳ chọn thay thế/Bổ sung (Alternative Options)" },
                   resources: {
-                    type: SchemaType.ARRAY,
+                    type: Type.ARRAY,
                     description: "ĐÂY LÀ PHẦN LẤY TỪ RAG. Đảm bảo URL là thật 100%.",
                     items: {
-                      type: SchemaType.OBJECT,
+                      type: Type.OBJECT,
                       properties: {
-                        type: { type: SchemaType.STRING },
-                        url: { type: SchemaType.STRING },
-                        label: { type: SchemaType.STRING },
-                        isPremium: { type: SchemaType.BOOLEAN }
+                        type: { type: Type.STRING },
+                        url: { type: Type.STRING },
+                        label: { type: Type.STRING },
+                        isPremium: { type: Type.BOOLEAN }
                       }
                     }
                   }
@@ -54,55 +70,88 @@ const generateSkillTreeDeclaration: FunctionDeclaration = {
 };
 
 // 1.5. Khai báo Function Tool duyệt Web
-const searchWebDeclaration: FunctionDeclaration = {
+const searchWebDeclaration: any = {
   name: "searchWebForCourses",
   description: "TRÌNH DUYỆT WEB TỰ ĐỘNG! Gọi công cụ này KHI BẠN KHÔNG CÓ SẴN (hoặc cạn kiệt) URL thật trong Context RAG để gán vào Roadmap, hoặc khi muốn lướt mạng để tìm khóa học mới nhất. Bạn CÓ THỂ GỌI TOOL NÀY NHIỀU LẦN để dò tìm URL cho từng chủ đề (Ví dụ: HTML, AWS).",
   parameters: {
-    type: SchemaType.OBJECT,
+    type: Type.OBJECT,
     properties: {
-      query: { type: SchemaType.STRING, description: "Từ khóa tra cứu (Ví dụ: 'AWS course youtube', 'ReactJS docs')" }
+      query: { type: Type.STRING, description: "Từ khóa tra cứu (Ví dụ: 'AWS course youtube', 'ReactJS docs')" }
     },
     required: ["query"]
   }
 };
 
 class AIService {
-  private genAI: GoogleGenerativeAI;
+  private genAI: GoogleGenAI;
 
   constructor() {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error("LỖI NGHIÊM TRỌNG: Thiếu biến môi trường GEMINI_API_KEY. Vui lòng thêm vào file .env!");
     }
-    this.genAI = new GoogleGenerativeAI(apiKey);
+    this.genAI = new GoogleGenAI({ apiKey });
   }
 
-  // Model đơn giản cho AI Tutor chatbox (không cần tools)
-  public getModel = () => {
-    return this.genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite-preview" });
+  // Xử lý Tin nhắn từ học viên đến AI Tutor (Có lịch sử hội thoại + Markdown output)
+  public generateTutorReply = async (
+    topic: string, 
+    message: string, 
+    chatHistory: { role: string; content: string }[] = []
+  ): Promise<string> => {
+    try {
+      // Xây dựng mảng contents gồm lịch sử + tin nhắn mới (tối đa 10 tin gần nhất)
+      const recentHistory = chatHistory.slice(-10);
+      const contents = [
+        ...recentHistory.map(msg => ({
+          role: msg.role === 'user' ? 'user' as const : 'model' as const,
+          parts: [{ text: msg.content }]
+        })),
+        { role: 'user' as const, parts: [{ text: message }] }
+      ];
+
+      const response = await this.genAI.models.generateContent({
+        model: "gemini-3.1-flash-lite-preview",
+        contents,
+        config: {
+          systemInstruction: 
+            "Bạn là AI Tutor lập trình. Học viên hỏi về: " + topic + ".\n" +
+            "QUY TẮC CỐT LÕI (Bắt buộc tuân thủ để đảm bảo tốc độ và trải nghiệm):\n" +
+            "1. TRẢ LỜI CỰC KỲ NGẮN GỌN (Tối đa 2-3 câu). Vào thẳng vấn đề, không chào hỏi dài dòng.\n" +
+            "2. CHỈ CUNG CẤP CODE khi thực sự cần thiết để minh hoạ. Nếu dùng code, PHẢI cực kỳ ngắn (1-3 dòng).\n" +
+            "3. LUÔN format output bằng định dạng Markdown (dùng **in đậm**, `code inline`, và ``` ngôn ngữ)."
+        }
+      });
+      return response.text || "Xin lỗi, tôi không thể trả lời lúc này.";
+    } catch (e) {
+      console.error("[AI Tutor Error]", e);
+      return "Hệ thống AI đang bị gián đoạn, vui lòng thử lại sau.";
+    }
   }
 
-  // 2. Khởi tạo một Phiên Chat (Agent Session) Độc lập
-  public createAgentSession = (): ChatSession => {
+  // Khởi tạo một Phiên Chat (Agent Session) Độc lập với Tool Calling
+  public createAgentSession = () => {
     const systemInstruction =
-      "Bạn là Agent Mentor AI chuyên tạo lộ trình học lập trình. " +
-      "Khi được yêu cầu, hãy GỌI TOOL 'generateSkillTree' NGAY LẬP TỨC với đầy đủ resources cho mỗi topic. " +
+      "Bạn là Agent Mentor AI chuyên tạo lộ trình học lập trình chuyên sâu. " +
+      "HÀNH ĐỘNG DUY NHẤT: GỌI TOOL 'generateSkillTree' NGAY LẬP TỨC. TUYỆT ĐỐI KHÔNG gọi 'searchWebForCourses'. " +
+      "Bạn PHẢI tạo lộ trình với 8-15 Phases chuyên sâu. " +
+      "MỖI PHASE CHỨA 5-8 TOPICS tách bạch — NGHIÊM CẤM gộp nhiều khái niệm vào 1 node (Cấm dùng dấu '/', 'và', '&' trong tên topic). " +
+      "Mỗi Topic PHẢI có trường topicId (dạng slug tiếng Anh, ví dụ: 'react-js'), description, isRequired, và resources đầy đủ (1 article + 2 video + 1 course). " +
       "Bạn ĐƯỢC PHÉP dùng URL chính thức nổi tiếng (reactjs.org, nodejs.org, developer.mozilla.org, youtube.com, udemy.com, freecodecamp.org). " +
-      "Mỗi topic phải có TỐI THIỂU 2-3 resources gồm: article/docs, video YouTube, và course. " +
-      "YÊU CẦU CHẤT LƯỢNG LINK: TUYỆT ĐỐI chỉ chọn các tài liệu, video có NĂM SẢN XUẤT MỚI NHẤT (ưu tiên 2023, 2024), LƯỢT VIEW CAO để đảm bảo không bị lỗi thời. " +
-      "Mỗi topic phải có trường isRequired: true (khuyến nghị bắt buộc) hoặc false (tuỳ chọn bổ sung). " +
-      "Mỗi Phase nên có 2-3 topic khuyến nghị + 1-2 topic tuỳ chọn. " +
-      "CHỈ gọi 'searchWebForCourses' khi được yêu cầu cụ thể, KHÔNG tự ý gọi.";
+      "Video YouTube: dùng url 'NEED_SEARCH_YT' để hệ thống ngầm tự tìm. ĐỪNG bịa link YouTube. " +
+      "Mỗi topic phải có trường isRequired: true (khuyến nghị bắt buộc) hoặc false (tuỳ chọn thay thế/bổ sung). " +
+      "TUYỆT ĐỐI KHÔNG gọi 'searchWebForCourses' — bạn đã có đủ dữ liệu RAG.";
 
-    const model = this.genAI.getGenerativeModel({ 
+
+    const chat = this.genAI.chats.create({ 
       model: "gemini-3.1-flash-lite-preview",
-      systemInstruction,
-      tools: [
-        { functionDeclarations: [generateSkillTreeDeclaration, searchWebDeclaration] }
-      ]
+      config: {
+        systemInstruction,
+        tools: [{ functionDeclarations: [generateSkillTreeDeclaration, searchWebDeclaration] }]
+      }
     });
 
-    return model.startChat();
+    return chat;
   }
 
   // 3. Xử lý Logic Code cho cú Functional Call (Post-process + Lưu DB)
@@ -114,42 +163,44 @@ class AIService {
     const ytSearch = (await import('yt-search')).default;
     let ytVideoIndex = 0; // Tránh trùng video giữa các topic
 
-    for (const phase of functionCallArgs.phases) {
-       for (const topic of phase.topics) {
-          if (!topic.resources || !Array.isArray(topic.resources)) continue;
-          
-          for (const r of topic.resources) {
-             const isYouTubeLink = r.url === 'NEED_SEARCH_YT' 
-                || (r.url && r.url.includes('youtube.com'))
-                || (r.url && r.url.includes('youtu.be'))
-                || r.type?.toLowerCase() === 'video';
+    // Hàm xử lý chung để tái cấu trúc lại mảng resource (Dò tìm yt-search)
+    const processResources = async (resources: any[], titleTitle: string) => {
+       if (!resources || !Array.isArray(resources)) return;
+       for (const r of resources) {
+          const isYouTubeLink = r.url === 'NEED_SEARCH_YT' 
+             || (r.url && r.url.includes('youtube.com'))
+             || (r.url && r.url.includes('youtu.be'))
+             || r.type?.toLowerCase() === 'video';
 
-             if (isYouTubeLink) {
-                try {
-                   const query = `${topic.title} ${r.label || ''} tutorial 2024`;
-                   console.log(`[YT-Search] Tìm video thật cho: "${query}"`);
-                   const ytRes = await ytSearch(query);
+          if (isYouTubeLink) {
+             try {
+                const query = `${titleTitle} ${r.label || ''} tutorial 2024`;
+                const ytRes = await ytSearch(query);
+                
+                if (ytRes?.videos?.length > 0) {
+                   const validVideos = ytRes.videos
+                      .filter((v: any) => v.seconds > 180)
+                      .sort((a: any, b: any) => (b.views || 0) - (a.views || 0));
                    
-                   if (ytRes?.videos?.length > 0) {
-                      // Lọc video > 3 phút (tránh shorts) và chọn video có view cao
-                      const validVideos = ytRes.videos
-                         .filter((v: any) => v.seconds > 180)
-                         .sort((a: any, b: any) => (b.views || 0) - (a.views || 0));
-                      
-                      // Lấy video theo index để tránh trùng lặp giữa các resource
-                      const pick = validVideos[ytVideoIndex % validVideos.length] || ytRes.videos[0];
-                      r.url = pick.url;
-                      r.label = r.label || pick.title;
-                      ytVideoIndex++;
-                   } else {
-                      r.url = `https://www.youtube.com/results?search_query=${encodeURIComponent(topic.title)}`;
-                   }
-                } catch (e) {
-                   console.error(`[YT-Search] Lỗi khi tìm: ${r.label}`, e);
-                   r.url = `https://www.youtube.com/results?search_query=${encodeURIComponent(topic.title)}`;
+                   const pick = validVideos[ytVideoIndex % validVideos.length] || ytRes.videos[0];
+                   r.url = pick.url;
+                   r.label = r.label || pick.title;
+                   ytVideoIndex++;
+                } else {
+                   r.url = `https://www.youtube.com/results?search_query=${encodeURIComponent(titleTitle)}`;
                 }
+             } catch (e) {
+                r.url = `https://www.youtube.com/results?search_query=${encodeURIComponent(titleTitle)}`;
              }
           }
+       }
+    };
+
+    // Duyệt yt-search cho vòng lặp Phase (Main Topic) và Topics (Sub Topics)
+    for (const phase of functionCallArgs.phases) {
+       await processResources(phase.resources, phase.phaseName);
+       for (const topic of phase.topics) {
+          await processResources(topic.resources, topic.title);
        }
     }
 

@@ -2,6 +2,8 @@ import { Collection, Db, MongoClient } from 'mongodb';
 import User from '~/models/schemas/User.schema';
 import Roadmap from '~/models/schemas/Roadmap.schema';
 import Resource from '~/models/schemas/Resource.schema';
+import RequestToken from '~/models/schemas/RequestToken.schema';
+import ChatMessage from '~/models/schemas/ChatMessage.schema';
 
 const uri = process.env.MONGODB_URI as string;
 
@@ -23,7 +25,9 @@ class DatabaseMongoClient {
       // Indexing logic
       await this.users.createIndex({ email: 1 }, { unique: true });
       await this.db.collection('roadmaps').createIndex({ userId: 1 });
-      await this.db.collection('chat_messages').createIndex({ roadmapId: 1 });
+      await this.db.collection('chat_messages').createIndex({ roadmap_id: 1, topic_id: 1 });
+      await this.db.collection('request_tokens').createIndex({ token: 1 });
+      await this.db.collection('request_tokens').createIndex({ user_id: 1 });
 
     } catch (error) {
       console.log('MongoDB connection error:', error);
@@ -43,8 +47,12 @@ class DatabaseMongoClient {
     return this.db.collection('resources');
   }
 
-  get chat_messages(): Collection<any> {
+  get chat_messages(): Collection<ChatMessage> {
     return this.db.collection('chat_messages');
+  }
+
+  get request_tokens(): Collection<RequestToken> {
+    return this.db.collection('request_tokens');
   }
 }
 

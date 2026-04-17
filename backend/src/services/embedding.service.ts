@@ -1,25 +1,27 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { pipeline } from '@xenova/transformers';
 import { databaseMongoClient } from '~/services/database.services';
 
 class EmbeddingService {
-  private genAI: GoogleGenerativeAI;
+  private embedder: any = null;
 
-  constructor() {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("LỖI NGHIÊM TRỌNG: Thiếu biến môi trường GEMINI_API_KEY trong EmbeddingService. Vui lòng kiểm tra file .env!");
+  constructor() {}
+
+  // Khởi tạo mô hình Local AI (chỉ tải 1 lần)
+  private async getEmbedder() {
+    if (!this.embedder) {
+      this.embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
     }
-    this.genAI = new GoogleGenerativeAI(apiKey);
+    return this.embedder;
   }
 
-  // Chuyển đổi văn bản thuần túy thành Không gian Vector (Embeddings)
+  // Chuyển đổi văn bản thuần túy thành Không gian Vector (Local Embeddings - 384 dimensions)
   public generateEmbedding = async (text: string): Promise<number[]> => {
     try {
-      const model = this.genAI.getGenerativeModel({ model: "gemini-embedding-2-preview" });
-      const result = await model.embedContent(text);
-      return result.embedding.values;
+      const embedder = await this.getEmbedder();
+      const output = await embedder(text, { pooling: 'mean', normalize: true });
+      return Array.from(output.data);
     } catch (error) {
-      console.error("Lỗi tạo Embedding:", error);
+      console.error("Lỗi tạo Local Embedding:", error);
       throw error;
     }
   }

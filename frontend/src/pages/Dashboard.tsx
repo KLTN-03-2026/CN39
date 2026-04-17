@@ -4,11 +4,13 @@ import { motion } from 'framer-motion';
 import { useAuth } from '~/context/AuthContext';
 import { api } from '~/services/api';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 export default function Dashboard() {
   const [file, setFile] = useState<File | null>(null);
   const [goal, setGoal] = useState('Fullstack Developer');
   const [isScanning, setIsScanning] = useState(false);
+  const [scanStatus, setScanStatus] = useState("Đang khởi tạo kết nối AI...");
   const [latestRoadmap, setLatestRoadmap] = useState<any>(null);
   
   const { user, logout } = useAuth();
@@ -30,6 +32,32 @@ export default function Dashboard() {
     };
     if (user) fetchLatest();
   }, [user]);
+
+  // Giả lập tiến trình khi AI đang phân tích CV
+  useEffect(() => {
+    if (isScanning) {
+      const steps = [
+        "Đang đọc nội dung và trích xuất từ khóa CV...",
+        "Truy vấn RAG (Retrieval-Augmented Generation)...",
+        "Đang ráp nối kiến thức vào Vector DB...",
+        "AI đang dựng trục Xương Sống của Cây Kỹ năng...",
+        "Đang phân bổ các Topic (Nhánh) phụ...",
+        "Đang truy xuất khóa học & URL YouTube mới nhất...",
+        "Đang render giao diện Neo-Brutalism..."
+      ];
+      let i = 0;
+      setScanStatus(steps[0]);
+      
+      const timer = setInterval(() => {
+        if (i < steps.length - 1) {
+          i++;
+          setScanStatus(steps[i]);
+        }
+      }, 3500);
+      
+      return () => clearInterval(timer);
+    }
+  }, [isScanning]);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -56,15 +84,15 @@ export default function Dashboard() {
       const serverMsg = err.response?.data?.message;
 
       if (status === 429) {
-        alert("⚠️ Hết quota API Gemini!\n\n" + (serverMsg || "Giới hạn miễn phí: 20 request/ngày. Vui lòng đổi API key hoặc thử lại sau vài giờ."));
-      } else if (status === 502) {
-        alert("🤖 AI không tạo được lộ trình.\n\n" + (serverMsg || "Vui lòng thử lại."));
-      } else if (status === 422) {
-        alert("📄 Không thể đọc file PDF.\n\nFile có thể bị hỏng hoặc là ảnh scan. Hãy dùng file PDF text.");
+        toast.error("⚠️ Hết quota API Gemini!\n\n" + (serverMsg || "Giới hạn miễn phí: 20 request/ngày. Vui lòng đổi API key hoặc thử lại sau vài giờ."));
+      } else if (status === 500) {
+        toast.error("🤖 AI không tạo được lộ trình.\n\n" + (serverMsg || "Vui lòng thử lại."));
+      } else if (status === 400 && serverMsg?.includes('PDF')) {
+        toast.error("📄 Không thể đọc file PDF.\n\nFile có thể bị hỏng hoặc là ảnh scan. Hãy dùng file PDF text.");
       } else if (status === 401) {
-        alert("🔒 Phiên đăng nhập hết hạn. Hệ thống đang tự làm mới...");
+        toast.error("🔒 Phiên đăng nhập hết hạn. Hệ thống đang tự làm mới...");
       } else {
-        alert("❌ Lỗi: " + (serverMsg || err.message));
+        toast.error("❌ Lỗi: " + (serverMsg || err.message));
       }
     } finally {
       setIsScanning(false);
@@ -97,25 +125,46 @@ export default function Dashboard() {
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[var(--color-neon-blue)] rounded-full mix-blend-screen filter blur-[150px] opacity-10 pointer-events-none"></div>
       
       {/* Landing Page Content */}
-      <div className="flex flex-col items-center justify-center text-center mt-12 mb-12 z-10 max-w-4xl mx-auto">
+      <motion.div 
+         initial={{ opacity: 0, y: 30 }}
+         animate={{ opacity: 1, y: 0 }}
+         transition={{ duration: 0.8 }}
+         className="flex flex-col items-center justify-center text-center mt-12 mb-12 z-10 max-w-4xl mx-auto"
+      >
          <h1 className="text-6xl md:text-7xl font-black mb-6 text-gradient tracking-tighter drop-shadow-lg">
             HỆ THỐNG ĐỊNH HƯỚNG NGHỀ NGHIỆP AI
          </h1>
          <p className="text-gray-400 text-lg md:text-xl max-w-2xl font-light leading-relaxed">
             Nền tảng Tự Lập Lộ Trình học tập tiên tiến nhất. Trí tuệ Nhân tạo sẽ tự động phân tích CV của bạn, dạo quanh Internet để ghép nối kiến thức và tạo ra một sơ đồ Skill Tree dành riêng cho bạn.
          </p>
-      </div>
+      </motion.div>
 
       {/* Upload Panel */}
-      <div className="glass-panel p-10 max-w-2xl w-full relative overflow-hidden z-10 border border-[var(--color-neon-blue)]/30 hover:border-[var(--color-neon-blue)]/60 transition-colors shadow-2xl">
+      <motion.div 
+         initial={{ opacity: 0, scale: 0.9 }}
+         animate={{ opacity: 1, scale: 1 }}
+         transition={{ duration: 0.5, delay: 0.3 }}
+         className="glass-panel p-10 max-w-2xl w-full relative overflow-hidden z-10 border border-[var(--color-neon-blue)]/30 hover:border-[var(--color-neon-blue)]/60 transition-colors shadow-2xl"
+      >
         
         {isScanning && (
-          <motion.div 
-            initial={{ top: '0%' }}
-            animate={{ top: '100%' }}
-            transition={{ repeat: Infinity, duration: 1.5, ease: "linear", repeatType: "reverse" }}
-            className="absolute left-0 w-full h-[2px] bg-[var(--color-neon-blue)] shadow-[0_0_15px_var(--color-neon-blue)] z-50"
-          />
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center border-2 border-[var(--color-neon-purple)]">
+             <motion.div 
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                className="w-16 h-16 border-4 border-[var(--color-neon-blue)] border-t-transparent rounded-full mb-6 shadow-[0_0_15px_var(--color-neon-blue)]"
+             />
+             <motion.p 
+                key={scanStatus}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="text-[var(--color-neon-purple)] font-black uppercase tracking-widest text-lg text-center px-4"
+             >
+                {scanStatus}
+             </motion.p>
+             <p className="text-gray-500 text-xs mt-4 uppercase tracking-widest">Tiến trình này có thể mất từ 30s đến 1 phút</p>
+          </div>
         )}
         
         <h2 className="text-2xl font-bold mb-6 text-center tracking-wide text-white">Khởi Trị Dữ Liệu Đầu Vào</h2>
@@ -173,7 +222,7 @@ export default function Dashboard() {
             TIẾP TỤC VỚI LỘ TRÌNH GẦN NHẤT
           </button>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

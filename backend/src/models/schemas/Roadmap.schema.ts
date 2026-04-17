@@ -19,6 +19,9 @@ export interface TopicItem {
 export interface PhaseItem {
   phaseName: string;
   duration: string;
+  description?: string;
+  isCompleted?: boolean;
+  resources?: ResourceItem[];
   topics: TopicItem[];
 }
 
@@ -49,6 +52,9 @@ export default class Roadmap {
     this.phases = roadmap.phases.map(phase => ({
       phaseName: phase.phaseName,
       duration: phase.duration,
+      description: phase.description || "",
+      isCompleted: phase.isCompleted || false,
+      resources: phase.resources || [],
       topics: phase.topics.map(topic => ({
         topicId: topic.topicId,
         title: topic.title,

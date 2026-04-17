@@ -67,8 +67,13 @@ class AuthController {
   };
 
   public logout = async (req: AuthRequest, res: Response) => {
-    if (req.userId) {
-       await authService.logout(req.userId);
+    const oldRefreshToken = req.headers.cookie
+       ?.split('; ')
+       ?.find(row => row.startsWith('refreshToken='))
+       ?.split('=')[1];
+
+    if (oldRefreshToken) {
+       await authService.logout(oldRefreshToken);
     }
     res.clearCookie('refreshToken');
     res.status(200).json({ message: 'Đăng xuất an toàn thành công' });

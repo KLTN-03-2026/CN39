@@ -5,6 +5,16 @@ export const api = axios.create({
   withCredentials: true,
 });
 
+// Request interceptor: Luôn gắn token mới nhất từ localStorage vào mỗi request
+// Giải quyết lỗi 401 khi user ở lâu trên trang (token trong memory bị cũ)
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Interceptor tự động refresh token khi access token hết hạn (401)
 api.interceptors.response.use(
   (response) => response,
@@ -25,6 +35,10 @@ api.interceptors.response.use(
         localStorage.setItem('access_token', newAccessToken);
         api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
         originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+        
+        // Dispatch event để AuthContext cập nhật state cho React
+        window.dispatchEvent(new CustomEvent('tokenRefreshed', { detail: newAccessToken }));
+        
         return api(originalRequest);
       } catch {
         localStorage.removeItem('access_token');

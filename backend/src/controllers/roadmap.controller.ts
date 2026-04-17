@@ -6,6 +6,7 @@ import { toolService } from '~/services/tool.service';
 import { embeddingService } from '~/services/embedding.service';
 import { databaseMongoClient } from '~/services/database.services';
 import { ObjectId } from 'mongodb';
+import ChatMessage from '~/models/schemas/ChatMessage.schema';
 
 class RoadmapController {
   
@@ -71,34 +72,43 @@ ${baseRoadmapJSON !== "NONE" ? baseRoadmapJSON : "Chưa có khung."}
 
 KHO TRI THỨC HỆ THỐNG (RAG): ${ragKnowledge}
 
-YÊU CẦU VỀ CẤU TRÚC GAME SKILL TREE:
-- Lộ trình phải đồ sộ và chuyên sâu. PHẢI tạo ÍT NHẤT 4-5 Giai đoạn (Phases).
-- MỖI Phase PHẢI chứa 3-5 Topics. Trong đó:
-  + 2-3 Topic đặt isRequired: true (KHUYẾN NGHỊ - bắt buộc hoàn thành để mở khoá Phase kế tiếp)
-  + 1-2 Topic đặt isRequired: false (TUỲ CHỌN - bổ sung nếu muốn, không ảnh hưởng mở khoá)
-- TÊN TOPIC: Phải là TÊN CÔNG NGHỆ HOẶC KHÁI NIỆM NGẮN GỌN CỤ THỂ (Ví dụ: "React", "Vue.js", "MongoDB", "Redis", "Docker", "GraphQL"). TUYỆT ĐỐI KHÔNG dùng câu mô tả dài dòng như "Kiến trúc hệ thống nâng cao" hay "Thành thạo Frontend".
+YÊU CẦU VỀ LUÔN SUY LUẬN NGẦM & GAP ANALYSIS (TỐI QUAN TRỌNG):
+1. PHÂN TÍCH KHOẢNG TRỐNG (GAP ANALYSIS): Bạn phải là một chuyên gia. Hãy đọc kỹ CV và Mục tiêu. BẠN PHẢI TỰ SUY LUẬN NGẦM các kỹ năng nền tảng mà ứng viên CHẮC CHẮN ĐÃ BIẾT dựa trên kinh nghiệm của họ. (Ví dụ: Nếu họ là Web Developer, chắc chắn họ đã biết HTTP, HTML, CSS, Javascript cơ bản).
+2. LƯỢC BỎ MẦM NON: TUYỆT ĐỐI KHÔNG ĐƯA CÁC KIẾN THỨC CƠ BẢN/ĐÃ BIẾT NÀY VÀO LỘ TRÌNH! Đừng bắt họ học lại từ đầu. Đừng sinh ra các Node vô nghĩa.
+3. SIÊU TẬP TRUNG VÀO KIẾN THỨC NÂNG CAO (ADVANCED GAP):
+   - Toàn bộ 100% Lộ trình bạn sinh ra CHỈ ĐƯỢC CHỨA những kỹ năng họ CÒN THIẾU và CẦN THIẾT cho mục tiêu.
+   - Hãy dùng TẤT CẢ bộ nhớ của bạn để đẻ ra một bản đồ cực kỳ sâu, chi chít các Phase nâng cao (ví dụ: SSR, System Design, CI/CD, Advanced Testing, Web Security, Microservices...).
+   - Tạo từ 6 đến 15 Phases chuyên sâu.
+4. MẬT ĐỘ TOPIC CỰC DÀY VÀ PHÂN TÁCH KHÁI NIỆM TRUYỆT ĐỐI KHẮT KHE (BẮT BUỘC):
+   - TRONG MỖI PHASE CHỨA THẬT NHIỀU TOPICS (Khoảng 5 - 10 Topics mỗi Phase).
+   - QUY TẮC ĐỘC LẬP NGHIÊM NGẶT CỦA MỌI TOPIC TRONG TOÀN BỘ BẢN ĐỒ: TUYỆT ĐỐI CẤM NGẶT VIỆC GỘP CHUNG BẤT KỲ KIẾN THỨC NÀO HAY SỬ DỤNG DẤU GẠCH CHÉO "/", CHỮ "VÀ/AND", HOẶC DẤU PHẨY "," TRONG TÊN NODE!
+   - Mọi Framework, Khái Niệm, hoặc Ngôn ngữ ĐỀU PHẢI ĐỨNG RIÊNG THÀNH 1 NODE ĐỘC LẬP. (Ví dụ cấm gộp Next.js và SSR, cấm gộp Vite và Rollup, cấm gộp HTTP và TCP...). Mọi thứ phải TÁCH RỜI!
+   - Các công nghệ lõi/tiêu chuẩn ngành -> isRequired: true
+   - Đưa thêm CÀNG NHIỀU OPTION CÀNG TỐT (Lựa chọn thay thế) -> isRequired: false (Ví dụ: React là Required, Vue/Svelte là Optional).
+5. TÊN TOPIC: Chỉ dùng 1 TỪ KHÓA hoặc Cụm từ ngắn (Ví dụ: "Next.js", "SSR", "Vite", "Zustand").
 
-CÁC YÊU CẦU KHÁC:
-1. Phân tích CV so với Mục tiêu. NẾU CÓ [BASE ROADMAP], tái sử dụng các Topic và Resources phù hợp. Tuyệt đối không lấy resource sai chủ đề.
-2. Mỗi topic bắt buộc có ĐẦY ĐỦ 4 tài liệu sau (không được thiếu):
-   - Đúng Tối đa 1 Official Docs: type "article", isPremium: false
-   - Đúng Tối đa 2 Videos YouTube: type "video", isPremium: false, url "NEED_SEARCH_YT"
-   - Đúng Tối đa 1 Khóa Học (isPremium: true): type "course"
-8. XỬ LÝ LINK (QUAN TRỌNG ĐỂ TRÁNH LINK RÁC/404): 
-   - Video YouTube: Ghi URL là: "NEED_SEARCH_YT". Hệ thống ngầm sẽ tự tìm Video thật. TUYỆT ĐỐI KHÔNG tự bịa link Youtube.
-   - Khoá học Premium (isPremium: true): Bắt buộc dùng link TÌM KIẾM của nhiều nền tảng khác nhau để tránh 404. (Ví dụ: https://www.udemy.com/courses/search/?q=[Từ+Khóa], https://scrimba.com/search?q=[Từ+Khoá], https://www.coursera.org/search?query=[Từ+Khóa]). KHÔNG tự bịa link chi tiết khoá học.
-   - Docs (Official): Chỉ dùng domain trang chủ (Ví dụ: https://react.dev).
-5. Khi trả lời text, CHỈ viết TỐI ĐA 2 câu ngắn gọn.
-`;
+CÁC YÊU CẦU VỀ TÀI NGUYÊN (RESOURCES):
+1. MỖI TOPIC BẮT BUỘC KHỞI TẠO ĐẦY ĐỦ TÀI NGUYÊN (Để tránh tình trạng Node trống rỗng):
+   - 1 Official Docs: type "article", isPremium: false
+   - Tối đa 2 Videos YouTube: type "video", isPremium: false, url "NEED_SEARCH_YT"
+   - Tối đa 1 Khóa Học (isPremium: true): type "course", url search.
+2. XỬ LÝ LINK: 
+   - Video YouTube: Dùng URL: "NEED_SEARCH_YT". Lõi ngầm tự kiếm. ĐỪNG tự bịa link Youtube.
+   - Khoá học Premium: Dùng search link (VD: https://www.udemy.com/courses/search/?q=[Từ+Khóa]). Không tự bịa URL chi tiết.
+   - Docs (Official): Dùng đúng domain trang chủ (VD: https://react.dev).
+3. HÀNH ĐỘNG: GỌI NGAY FUNCTION 'generateSkillTree' để dựng JSON. KHI TRẢ LỜI TEXT, XIN CHÚC MỪNG VÀ BÁO RẰNG BẠN ĐÃ LƯỢC BỎ CÁC KIẾN THỨC CƠ BẢN.`;
 
     // 4. Kích hoạt Suy luận Model & Bắt tín hiệu Call Tool
-    const result = await chatSession.sendMessage(prompt);
+    const result = await chatSession.sendMessage({ message: prompt });
     
     // VÒNG LẶP ĐẠI LÝ (AUTONOMOUS AGENT LOOP)
-    let functionCalls = result.response.functionCalls();
+    let functionCalls = result.functionCalls;
     let dbRoadmap: any = null;
+    // Chỉ truy cập .text khi KHÔNG có functionCalls (tránh SDK throw error "non-text parts")
     let agentFinalText = "";
-    try { agentFinalText = result.response.text(); } catch {}
+    if (!functionCalls || functionCalls.length === 0) {
+      try { agentFinalText = result.text || ""; } catch { agentFinalText = ""; }
+    }
     
     console.log(`[Agent] Initial response - functionCalls: ${functionCalls?.length || 0}, hasText: ${!!agentFinalText}`);
     
@@ -120,28 +130,32 @@ CÁC YÊU CẦU KHÁC:
             const searchResults = await toolService.searchWeb(args.query);
             
             await delay(13000); // 60s / 5 RPM = 12s tối thiểu, dùng 13s cho an toàn
-            const nextTurn = await chatSession.sendMessage([{
+            const nextTurn = await chatSession.sendMessage({ message: [{
               functionResponse: {
                  name: "searchWebForCourses",
                  response: { results: searchResults }
               }
-            }]);
+            }]});
             
-            functionCalls = nextTurn.response.functionCalls();
-            try { agentFinalText = nextTurn.response.text(); } catch {}
+            functionCalls = nextTurn.functionCalls;
+            if (!functionCalls || functionCalls.length === 0) {
+              try { agentFinalText = nextTurn.text || ""; } catch { agentFinalText = ""; }
+            }
 
          } else if (call.name === "searchWebForCourses" && searchCount >= MAX_SEARCH) {
             // Đã search đủ rồi → trả kết quả rỗng ép AI chuyển sang generateSkillTree
             console.log(`[Agent] Đã search ${MAX_SEARCH} lần, ép chuyển sang generateSkillTree`);
             await delay(13000);
-            const nextTurn = await chatSession.sendMessage([{
+            const nextTurn = await chatSession.sendMessage({ message: [{
               functionResponse: {
                  name: "searchWebForCourses",
                  response: { results: [], message: "Đã đủ dữ liệu. Hãy gọi generateSkillTree ngay." }
               }
-            }]);
-            functionCalls = nextTurn.response.functionCalls();
-            try { agentFinalText = nextTurn.response.text(); } catch {}
+            }]});
+            functionCalls = nextTurn.functionCalls;
+            if (!functionCalls || functionCalls.length === 0) {
+              try { agentFinalText = nextTurn.text || ""; } catch { agentFinalText = ""; }
+            }
 
          } else if (call.name === "generateSkillTree") {
             const args = call.args as any;
@@ -172,11 +186,11 @@ CÁC YÊU CẦU KHÁC:
         console.log(`[Agent Fallback ${retry + 1}] Ép buộc gọi generateSkillTree...`);
         await delay(13000);
         try {
-          const forceResult = await chatSession.sendMessage(
+          const forceResult = await chatSession.sendMessage({ message:
             "LỆNH HỆ THỐNG: Bạn PHẢI gọi tool 'generateSkillTree' ngay bây giờ. Hãy tạo lộ trình dựa trên thông tin CV đã có. KHÔNG được trả lời bằng text."
-          );
-          const forceCalls = forceResult.response.functionCalls();
-          try { agentFinalText = forceResult.response.text(); } catch {}
+          });
+          const forceCalls = forceResult.functionCalls;
+          try { agentFinalText = forceResult.text || ""; } catch {}
           
           console.log(`[Agent Fallback ${retry + 1}] functionCalls: ${forceCalls?.length || 0}`);
 
@@ -231,35 +245,40 @@ CÁC YÊU CẦU KHÁC:
       throw { status: 400, message: "Vui lòng nhập câu hỏi." };
     }
 
-    // Lưu tin nhắn user vào DB
-    if (roadmapId && topic) {
-       await databaseMongoClient.chat_messages.insertOne({
-          roadmapId: new ObjectId(roadmapId),
-          topic,
-          role: 'user',
-          text: message,
-          createdAt: new Date()
-       });
+    // Lấy lịch sử hội thoại gần nhất (chưa bao gồm tin vừa gửi) để truyền cho AI làm context
+    let chatHistory: { role: string; content: string }[] = [];
+    if (roadmapId && topic && req.userId) {
+       const historyDocs = await databaseMongoClient.chat_messages.find(
+          { roadmap_id: new ObjectId(roadmapId), topic_id: topic },
+          { sort: { created_at: 1 } }
+       ).toArray();
+       chatHistory = historyDocs.map(m => ({ role: m.role, content: m.content }));
     }
 
-    const model = aiService.getModel();
-    const result = await model.generateContent(
-      `Bạn là AI Tutor chuyên dạy lập trình. Học viên đang hỏi về chủ đề "${topic || 'lập trình'}". ` +
-      `Trả lời ngắn gọn, dễ hiểu, tối đa 3-4 câu. Câu hỏi: "${message}"`
-    );
-    
-    let reply = "";
-    try { reply = result.response.text(); } catch { reply = "Xin lỗi, tôi không thể trả lời lúc này."; }
+    // Lưu tin nhắn user vào DB (sau khi đã clone lịch sử cũ)
+    if (roadmapId && topic && req.userId) {
+       await databaseMongoClient.chat_messages.insertOne(new ChatMessage({
+          user_id: new ObjectId(req.userId),
+          roadmap_id: new ObjectId(roadmapId),
+          topic_id: topic,
+          role: 'user',
+          content: message,
+          created_at: new Date()
+       }));
+    }
+
+    const reply = await aiService.generateTutorReply(topic, message, chatHistory);
 
     // Lưu tin nhắn AI vào DB
-    if (roadmapId && topic) {
-       await databaseMongoClient.chat_messages.insertOne({
-          roadmapId: new ObjectId(roadmapId),
-          topic,
-          role: 'ai',
-          text: reply,
-          createdAt: new Date()
-       });
+    if (roadmapId && topic && req.userId) {
+       await databaseMongoClient.chat_messages.insertOne(new ChatMessage({
+          user_id: new ObjectId(req.userId),
+          roadmap_id: new ObjectId(roadmapId),
+          topic_id: topic,
+          role: 'model',
+          content: reply,
+          created_at: new Date()
+       }));
     }
 
     res.status(200).json({ reply });
@@ -273,43 +292,96 @@ CÁC YÊU CẦU KHÁC:
     }
 
     const messages = await databaseMongoClient.chat_messages.find(
-       { roadmapId: new ObjectId(roadmapId), topic },
-       { sort: { createdAt: 1 } }
+       { roadmap_id: new ObjectId(roadmapId), topic_id: topic },
+       { sort: { created_at: 1 } }
     ).toArray();
 
     // Map lại để trả về mảng { role, text } cho frontend
-    const history = messages.map(m => ({ role: m.role, text: m.text }));
+    const history = messages.map(m => ({ role: m.role, text: m.content }));
     res.status(200).json({ history });
   }
   // Đánh dấu hoàn thành Topic
   public completeTopic = async (req: AuthRequest, res: Response) => {
     const { roadmapId, topicId } = req.params;
+    const { phaseIndex } = req.body; // Frontend gửi kèm phaseIndex để update chính xác
     const userId = req.userId;
     
     if (!roadmapId || !topicId || !userId) {
       throw { status: 400, message: "Thiếu tham số." };
     }
 
-    // Update the specific topic's isCompleted field to true
-    const result = await databaseMongoClient.roadmaps.updateOne(
-      { 
-        _id: new ObjectId(roadmapId),
-        userId: new ObjectId(userId),
-        "phases.topics.topicId": topicId
-      },
-      { 
-        $set: { "phases.$[].topics.$[topic].isCompleted": true } 
-      },
-      {
-        arrayFilters: [{ "topic.topicId": topicId }]
-      }
-    );
-
-    if (result.matchedCount === 0) {
-      throw { status: 404, message: "Không tìm thấy Topic hoặc Roadmap." };
+    // Nếu là Phase Node (Ví dụ: "phase-0", "phase-1")
+    if (topicId.startsWith('phase-')) {
+      const pIdx = parseInt(topicId.split('-')[1], 10);
+      const result = await databaseMongoClient.roadmaps.updateOne(
+        { _id: new ObjectId(roadmapId), userId: new ObjectId(userId) },
+        { $set: { [`phases.${pIdx}.isCompleted`]: true } }
+      );
+      if (result.matchedCount === 0) throw { status: 404, message: "Không tìm thấy Roadmap." };
+      res.status(200).json({ message: "Đã đánh dấu hoàn thành 1 Giai đoạn!" });
+      return;
     }
 
-    res.status(200).json({ message: "Đã đánh dấu hoàn thành kỹ năng!" });
+    // CHIẾN LƯỢC MỚI: Luôn dùng phaseIndex + tìm topicIndex trong mảng để dùng đường dẫn trực tiếp
+    // Đây là cách đáng tin cậy nhất vì MongoDB arrayFilters thường fail với nested arrays
+    if (phaseIndex !== undefined && phaseIndex !== null) {
+      const pIdx = parseInt(phaseIndex, 10);
+      
+      // Lấy roadmap từ DB để tìm index chính xác của topic
+      const roadmap = await databaseMongoClient.roadmaps.findOne(
+        { _id: new ObjectId(roadmapId), userId: new ObjectId(userId) }
+      );
+      
+      if (!roadmap) throw { status: 404, message: "Không tìm thấy Roadmap." };
+      
+      const phase = roadmap.phases?.[pIdx];
+      if (!phase) throw { status: 404, message: "Không tìm thấy Phase." };
+      
+      // Tìm topic bằng topicId hoặc fallback index
+      let topicIndex = -1;
+      const fallbackMatch = topicId.match(/^topic-(\d+)-(\d+)$/);
+      
+      if (fallbackMatch) {
+        topicIndex = parseInt(fallbackMatch[2], 10);
+      } else {
+        topicIndex = phase.topics.findIndex((t: any) => t.topicId === topicId);
+      }
+      
+      if (topicIndex < 0 || topicIndex >= phase.topics.length) {
+        throw { status: 404, message: "Không tìm thấy Topic trong Phase." };
+      }
+      
+      // Update trực tiếp bằng đường dẫn array index — KHÔNG dùng arrayFilters
+      const result = await databaseMongoClient.roadmaps.updateOne(
+        { _id: new ObjectId(roadmapId), userId: new ObjectId(userId) },
+        { $set: { [`phases.${pIdx}.topics.${topicIndex}.isCompleted`]: true } }
+      );
+      
+      console.log(`[completeTopic] Updated phases.${pIdx}.topics.${topicIndex}.isCompleted = true (matched: ${result.matchedCount}, modified: ${result.modifiedCount})`);
+      
+      if (result.matchedCount === 0) {
+        throw { status: 404, message: "Không tìm thấy Roadmap." };
+      }
+      
+      res.status(200).json({ message: "Đã đánh dấu hoàn thành kỹ năng!" });
+      return;
+    }
+    
+    // Fallback cũ cho trường hợp không có phaseIndex (backward compatibility)
+    const fallbackMatch = topicId.match(/^topic-(\d+)-(\d+)$/);
+    if (fallbackMatch) {
+      const pIdx = parseInt(fallbackMatch[1], 10);
+      const tIdx = parseInt(fallbackMatch[2], 10);
+      const result = await databaseMongoClient.roadmaps.updateOne(
+        { _id: new ObjectId(roadmapId), userId: new ObjectId(userId) },
+        { $set: { [`phases.${pIdx}.topics.${tIdx}.isCompleted`]: true } }
+      );
+      if (result.matchedCount === 0) throw { status: 404, message: "Không tìm thấy Roadmap." };
+      res.status(200).json({ message: "Đã đánh dấu hoàn thành kỹ năng!" });
+      return;
+    }
+
+    throw { status: 400, message: "Không thể xác định vị trí Topic. Vui lòng thử lại." };
   }
 }
 

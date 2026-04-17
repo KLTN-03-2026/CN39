@@ -1,3 +1,8 @@
 node_modules/
 .env
 dist/
+embedder_local.mjs
+embedder.mjs
+test_embed.js
+/scraper.mjs
+/massive_roadmap_resources.md

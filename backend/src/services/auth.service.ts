@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { ObjectId } from 'mongodb';
 import { databaseMongoClient } from '~/services/database.services';
 import User from '~/models/schemas/User.schema';
+import RequestToken from '~/models/schemas/RequestToken.schema';
 
 const hashPassword = (password: string) => {
   return crypto.createHash('sha256').update(password).digest('hex');
@@ -49,10 +50,10 @@ class AuthService {
 
     const { accessToken, refreshToken } = generateTokens(user._id!.toString());
 
-    await databaseMongoClient.users.updateOne(
-      { _id: user._id },
-      { $set: { refreshToken: refreshToken } }
-    );
+    await databaseMongoClient.request_tokens.insertOne(new RequestToken({
+       user_id: user._id as ObjectId,
+       token: refreshToken
+    }));
 
     return {
       userId: user._id,
@@ -68,19 +69,22 @@ class AuthService {
 
     try {
       const decoded = jwt.verify(oldRefreshToken, process.env.JWT_REFRESH_SECRET as string) as { userId: string };
+
+      // 1. Kiểm tra xem Refresh Token có tồn tại trong CSDL không
+      const activeToken = await databaseMongoClient.request_tokens.findOne({ token: oldRefreshToken });
       
-      const user = await databaseMongoClient.users.findOne({ _id: new ObjectId(decoded.userId) });
-      
-      if (!user || user.refreshToken !== oldRefreshToken) {
-        throw { status: 403, message: 'Token không khớp trên Database hoặc đã bị thu hồi' };
+      if (!activeToken) {
+         throw { status: 401, message: 'Token không hợp lệ hoặc đã bị thu hồi' };
       }
 
+      // Nếu hợp lệ, tiến hành Rotate Token (Xóa cũ, cấp mới)
+      await databaseMongoClient.request_tokens.deleteOne({ _id: activeToken._id });
       const { accessToken, refreshToken } = generateTokens(decoded.userId);
 
-      await databaseMongoClient.users.updateOne(
-        { _id: user._id },
-        { $set: { refreshToken: refreshToken } }
-      );
+      await databaseMongoClient.request_tokens.insertOne(new RequestToken({
+         user_id: new ObjectId(decoded.userId),
+         token: refreshToken
+      }));
 
       return { accessToken, refreshToken };
 
@@ -89,11 +93,10 @@ class AuthService {
     }
   }
 
-  async logout(userId: string) {
-    await databaseMongoClient.users.updateOne(
-      { _id: new ObjectId(userId) },
-      { $set: { refreshToken: "" } } 
-    );
+  async logout(oldRefreshToken: string) {
+    if (oldRefreshToken) {
+      await databaseMongoClient.request_tokens.deleteOne({ token: oldRefreshToken });
+    }
   }
 }
 

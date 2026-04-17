@@ -5,7 +5,6 @@ interface UserType {
   email: string;
   fullName: string;
   passwordHash: string;
-  refreshToken?: string;
   createdAt?: Date;
 }
 
@@ -14,7 +13,6 @@ export default class User {
   email: string;
   fullName: string;
   passwordHash: string;
-  refreshToken: string;
   createdAt: Date;
 
   constructor(user: UserType) {
@@ -22,7 +20,6 @@ export default class User {
     this.email = user.email;
     this.fullName = user.fullName;
     this.passwordHash = user.passwordHash;
-    this.refreshToken = user.refreshToken || '';
     this.createdAt = user.createdAt || new Date();
   }
 }

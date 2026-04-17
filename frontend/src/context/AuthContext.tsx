@@ -1,3 +1,4 @@
+// @refresh reset
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '~/services/api';
 
@@ -11,7 +12,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (userData: User, token: string) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -19,25 +20,32 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   token: null,
   login: () => {},
-  logout: () => {},
+  logout: async () => {},
   isAuthenticated: false,
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('access_token'));
+  const [user, setUser] = useState<User | null>(() => {
+    const stored = localStorage.getItem('user_info');
+    return stored ? JSON.parse(stored) : null;
+  });
 
   useEffect(() => {
-    // Khôi phục phiên đăng nhập khi load lại trang
-    const storedToken = localStorage.getItem('access_token');
-    const storedUser = localStorage.getItem('user_info');
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-      // Tự động ghim token vào instance Axios chung
-      api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+    if (token) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }
-  }, []);
+
+    const handleTokenRefresh = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      setToken(customEvent.detail);
+    };
+    window.addEventListener('tokenRefreshed', handleTokenRefresh);
+
+    return () => {
+      window.removeEventListener('tokenRefreshed', handleTokenRefresh);
+    };
+  }, [token]);
 
   const login = (userData: User, jwtToken: string) => {
     setUser(userData);
@@ -47,7 +55,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     api.defaults.headers.common['Authorization'] = `Bearer ${jwtToken}`;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (e) {
+      // Bỏ qua lỗi nếu server không phản hồi — vẫn xoá client
+    }
     setUser(null);
     setToken(null);
     localStorage.removeItem('access_token');

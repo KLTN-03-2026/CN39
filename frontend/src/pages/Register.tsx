@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '~/services/api';
 import { useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 export default function Register() {
   const [fullName, setFullName] = useState('');
@@ -17,11 +18,15 @@ export default function Register() {
     setError('');
     
     try {
-      await api.post('/auth/register', { fullName, email, password });
-      alert("Đăng ký thành công! Hãy đăng nhập hệ thống.");
-      navigate('/login');
+      const res = await api.post('/auth/register', { fullName, email, password });
+      if (res.status === 201) {
+        toast.success("Đăng ký thành công! Hãy đăng nhập hệ thống.");
+        navigate('/login');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Đăng ký thất bại. Email đã tồn tại?');
+      const message = err.response?.data?.message || 'Đăng ký thất bại. Email đã tồn tại?';
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
