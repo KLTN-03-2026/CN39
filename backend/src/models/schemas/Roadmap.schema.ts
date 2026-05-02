@@ -1,10 +1,11 @@
 import { ObjectId } from 'mongodb';
 
 export interface ResourceItem {
-  type: string;
+  title: string;
   url: string;
-  label: string;
-  isPremium: boolean;
+  type: string;
+  description?: string;
+  isPremium?: boolean;
 }
 
 export interface TopicItem {
@@ -12,59 +13,49 @@ export interface TopicItem {
   title: string;
   description: string;
   isCompleted: boolean;
-  isRequired: boolean; // true = Khuyến nghị (bắt buộc để mở khoá Phase kế), false = Tuỳ chọn
+  isRequired: boolean;
   resources: ResourceItem[];
+  subTopics?: TopicItem[];
+  skillRoadmapSlug?: string;
+  status?: 'not_started' | 'in_progress' | 'completed';
 }
 
-export interface PhaseItem {
-  phaseName: string;
-  duration: string;
-  description?: string;
-  isCompleted?: boolean;
-  resources?: ResourceItem[];
-  topics: TopicItem[];
-}
-
-// Lưu chung tất cả vào 1 Document theo Quy Tắc Thiết Kế MongoDB (Nhúng - Embed)
 export default class Roadmap {
   _id?: ObjectId;
   userId: ObjectId;
-  targetRole: string; // Vị trí người dùng muốn hướng tới
-  level: string; // Trình độ được AI nhận diện (Intern, Fresher, Junior)
-  phases: PhaseItem[];
+  targetRole: string;
+  level: string;
+  topics: TopicItem[];
   createdAt: Date;
   updatedAt: Date;
+  metadata?: {
+    totalTopics: number;
+    completedTopics: number;
+    estimatedDays: number;
+  };
 
   constructor(roadmap: {
     _id?: ObjectId;
     userId: ObjectId;
     targetRole: string;
     level: string;
-    phases: PhaseItem[];
+    topics: TopicItem[];
     createdAt?: Date;
     updatedAt?: Date;
+    metadata?: any;
   }) {
     const now = new Date();
     this._id = roadmap._id;
     this.userId = roadmap.userId;
     this.targetRole = roadmap.targetRole;
     this.level = roadmap.level;
-    this.phases = roadmap.phases.map(phase => ({
-      phaseName: phase.phaseName,
-      duration: phase.duration,
-      description: phase.description || "",
-      isCompleted: phase.isCompleted || false,
-      resources: phase.resources || [],
-      topics: phase.topics.map(topic => ({
-        topicId: topic.topicId,
-        title: topic.title,
-        description: topic.description,
-        isCompleted: topic.isCompleted || false,
-        isRequired: topic.isRequired !== undefined ? topic.isRequired : true, // Mặc định là khuyến nghị
-        resources: topic.resources || []
-      }))
-    }));
+    this.topics = roadmap.topics || [];
     this.createdAt = roadmap.createdAt || now;
     this.updatedAt = roadmap.updatedAt || now;
+    this.metadata = roadmap.metadata || {
+      totalTopics: this.topics.length,
+      completedTopics: 0,
+      estimatedDays: 30
+    };
   }
 }

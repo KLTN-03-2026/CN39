@@ -33,7 +33,6 @@ export default function Dashboard() {
     if (user) fetchLatest();
   }, [user]);
 
-  // Giả lập tiến trình khi AI đang phân tích CV
   useEffect(() => {
     if (isScanning) {
       const steps = [
@@ -41,188 +40,95 @@ export default function Dashboard() {
         "Truy vấn RAG (Retrieval-Augmented Generation)...",
         "Đang ráp nối kiến thức vào Vector DB...",
         "AI đang dựng trục Xương Sống của Cây Kỹ năng...",
-        "Đang phân bổ các Topic (Nhánh) phụ...",
-        "Đang truy xuất khóa học & URL YouTube mới nhất...",
-        "Đang render giao diện Neo-Brutalism..."
+        "AI Agent đang lọc bỏ các kiến thức bạn đã biết...",
+        "Hoàn tất! Đang chuyển hướng..."
       ];
       let i = 0;
       setScanStatus(steps[0]);
-      
       const timer = setInterval(() => {
         if (i < steps.length - 1) {
           i++;
           setScanStatus(steps[i]);
         }
-      }, 3500);
-      
+      }, 3000);
       return () => clearInterval(timer);
     }
   }, [isScanning]);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
-    }
+    if (e.target.files && e.target.files.length > 0) setFile(e.target.files[0]);
   };
 
   const handleProcess = async () => {
     if (!file) return;
     setIsScanning(true);
-    
-    // Đóng gói file và mục tiêu gửi lên AI Agent
     const formData = new FormData();
     formData.append('cv', file);
     formData.append('goal', goal);
 
     try {
       const res = await api.post('/roadmaps/generate', formData);
-      if (res.data.roadmapData) {
-         navigate('/roadmap', { state: { roadmapData: res.data.roadmapData, agentChat: res.data.agentChat } });
+      if (res.data.roadmapId) {
+         navigate(`/roadmap/${res.data.roadmapId}`, { state: { roadmapData: res.data.roadmapData } });
       }
     } catch (err: any) {
-      const status = err.response?.status;
-      const serverMsg = err.response?.data?.message;
-
-      if (status === 429) {
-        toast.error("⚠️ Hết quota API Gemini!\n\n" + (serverMsg || "Giới hạn miễn phí: 20 request/ngày. Vui lòng đổi API key hoặc thử lại sau vài giờ."));
-      } else if (status === 500) {
-        toast.error("🤖 AI không tạo được lộ trình.\n\n" + (serverMsg || "Vui lòng thử lại."));
-      } else if (status === 400 && serverMsg?.includes('PDF')) {
-        toast.error("📄 Không thể đọc file PDF.\n\nFile có thể bị hỏng hoặc là ảnh scan. Hãy dùng file PDF text.");
-      } else if (status === 401) {
-        toast.error("🔒 Phiên đăng nhập hết hạn. Hệ thống đang tự làm mới...");
-      } else {
-        toast.error("❌ Lỗi: " + (serverMsg || err.message));
-      }
+      toast.error("Lỗi: " + (err.response?.data?.message || err.message));
     } finally {
       setIsScanning(false);
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
   return (
-    <div className="min-h-screen p-8 flex flex-col items-center justify-center font-sans">
-      
+    <div className="min-h-screen p-8 flex flex-col items-center justify-center font-sans bg-black text-white">
       {/* Top Navbar */}
       <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-50">
-         <div className="text-xl font-black text-gradient">SYSTEM.AI</div>
+         <div className="text-xl font-black text-blue-500">SYSTEM.AI</div>
          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-[var(--color-neon-blue)] bg-[var(--color-glass-overlay)] px-4 py-2 rounded-full border border-[var(--color-glass-border)]">
-               <UserIcon className="w-4 h-4" />
-               <span className="font-bold">{user?.fullName}</span>
+            <div className="bg-gray-900 border border-gray-800 px-4 py-2 rounded-full flex items-center gap-2">
+               <UserIcon className="w-4 h-4 text-blue-400" />
+               <span className="font-bold text-sm">{user?.fullName}</span>
             </div>
-            <button onClick={handleLogout} className="p-2 text-gray-400 hover:text-red-400 transition-colors bg-[var(--color-glass-overlay)] rounded-full border border-[var(--color-glass-border)]">
-               <LogOut className="w-4 h-4" />
-            </button>
+            <button onClick={() => { logout(); navigate('/login'); }} className="p-2 hover:bg-red-900/20 rounded-full transition-colors"><LogOut className="w-4 h-4" /></button>
          </div>
       </div>
 
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[var(--color-neon-purple)] rounded-full mix-blend-screen filter blur-[150px] opacity-10 pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[var(--color-neon-blue)] rounded-full mix-blend-screen filter blur-[150px] opacity-10 pointer-events-none"></div>
-      
-      {/* Landing Page Content */}
-      <motion.div 
-         initial={{ opacity: 0, y: 30 }}
-         animate={{ opacity: 1, y: 0 }}
-         transition={{ duration: 0.8 }}
-         className="flex flex-col items-center justify-center text-center mt-12 mb-12 z-10 max-w-4xl mx-auto"
-      >
-         <h1 className="text-6xl md:text-7xl font-black mb-6 text-gradient tracking-tighter drop-shadow-lg">
-            HỆ THỐNG ĐỊNH HƯỚNG NGHỀ NGHIỆP AI
-         </h1>
-         <p className="text-gray-400 text-lg md:text-xl max-w-2xl font-light leading-relaxed">
-            Nền tảng Tự Lập Lộ Trình học tập tiên tiến nhất. Trí tuệ Nhân tạo sẽ tự động phân tích CV của bạn, dạo quanh Internet để ghép nối kiến thức và tạo ra một sơ đồ Skill Tree dành riêng cho bạn.
-         </p>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-4xl mb-12">
+         <h1 className="text-6xl md:text-7xl font-black mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-600 tracking-tighter">AI CAREER ROADMAP</h1>
+         <p className="text-gray-400 text-lg">Tải CV của bạn lên để AI Agent phân tích Gap Analysis và thiết kế lộ trình học tập chuyên biệt.</p>
       </motion.div>
 
-      {/* Upload Panel */}
-      <motion.div 
-         initial={{ opacity: 0, scale: 0.9 }}
-         animate={{ opacity: 1, scale: 1 }}
-         transition={{ duration: 0.5, delay: 0.3 }}
-         className="glass-panel p-10 max-w-2xl w-full relative overflow-hidden z-10 border border-[var(--color-neon-blue)]/30 hover:border-[var(--color-neon-blue)]/60 transition-colors shadow-2xl"
-      >
-        
+      <div className="bg-gray-900/50 border border-gray-800 p-8 rounded-[2rem] w-full max-w-2xl relative overflow-hidden backdrop-blur-xl">
         {isScanning && (
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center border-2 border-[var(--color-neon-purple)]">
-             <motion.div 
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-                className="w-16 h-16 border-4 border-[var(--color-neon-blue)] border-t-transparent rounded-full mb-6 shadow-[0_0_15px_var(--color-neon-blue)]"
-             />
-             <motion.p 
-                key={scanStatus}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="text-[var(--color-neon-purple)] font-black uppercase tracking-widest text-lg text-center px-4"
-             >
-                {scanStatus}
-             </motion.p>
-             <p className="text-gray-500 text-xs mt-4 uppercase tracking-widest">Tiến trình này có thể mất từ 30s đến 1 phút</p>
+          <div className="absolute inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-8 text-center">
+             <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-6" />
+             <p className="text-blue-400 font-bold uppercase tracking-widest">{scanStatus}</p>
           </div>
         )}
-        
-        <h2 className="text-2xl font-bold mb-6 text-center tracking-wide text-white">Khởi Trị Dữ Liệu Đầu Vào</h2>
-        
-        <div className="mb-6 glass-panel p-4 bg-black/40 border-dashed border-gray-600/50">
-           <label className="block text-xs font-bold text-[var(--color-neon-purple)] mb-2 uppercase tracking-widest">Mục Tiêu Công Việc Của Bạn</label>
-           <input 
-              type="text" 
-              value={goal}
-              onChange={(e) => setGoal(e.target.value)}
-              className="w-full bg-transparent text-xl font-bold text-white focus:outline-none border-b border-gray-700 pb-2 focus:border-[var(--color-neon-purple)] transition-colors"
-              placeholder="VD: Backend Nodejs, Data Analyst..."
-              disabled={isScanning}
-           />
+
+        <div className="mb-8">
+           <label className="text-[10px] font-black text-purple-500 uppercase tracking-widest mb-2 block">Mục Tiêu Nghề Nghiệp</label>
+           <input type="text" value={goal} onChange={(e) => setGoal(e.target.value)} className="w-full bg-transparent border-b border-gray-800 focus:border-purple-500 py-3 text-xl font-bold outline-none transition-colors" placeholder="VD: Senior React Developer" />
         </div>
 
-        <div className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all relative cursor-pointer group ${isScanning ? 'border-[var(--color-neon-blue)] neon-glow-primary' : 'border-[var(--color-glass-border)] hover:border-[var(--color-neon-purple)]'}`}>
-          <input 
-            type="file" 
-            accept=".pdf"
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            onChange={handleUpload}
-            disabled={isScanning}
-          />
-          <UploadCloud className={`w-16 h-16 mx-auto mb-4 transition-colors ${isScanning ? 'text-[var(--color-neon-blue)]' : 'text-gray-400 group-hover:text-[var(--color-neon-purple)]'}`} />
-          <h3 className="text-xl font-semibold mb-2">
-            {file ? file.name : "Kéo thả hoặc nhấn để tải CV lên"}
-          </h3>
-          <p className="text-gray-500 text-sm">Chỉ hỗ trợ PDF</p>
+        <div className="border-2 border-dashed border-gray-800 hover:border-blue-500 rounded-[1.5rem] p-12 text-center relative group transition-colors">
+          <input type="file" accept=".pdf" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleUpload} />
+          <UploadCloud className="w-12 h-12 mx-auto mb-4 text-gray-600 group-hover:text-blue-500" />
+          <h3 className="font-bold text-lg">{file ? file.name : "Tải lên CV (PDF)"}</h3>
+          <p className="text-gray-500 text-sm mt-1">AI sẽ đọc kinh nghiệm của bạn từ đây</p>
         </div>
 
         {file && (
-          <button 
-            onClick={handleProcess}
-            disabled={isScanning || !goal}
-            className="mt-8 w-full py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-[var(--color-neon-purple)] to-[var(--color-neon-blue)] hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(176,38,255,0.3)] hover:shadow-[0_0_30px_rgba(0,243,255,0.5)] disabled:opacity-50 disabled:cursor-wait"
-          >
-            {isScanning ? (
-              <span className="animate-pulse tracking-wide uppercase">AI đang xử lý RAG & Phân tích...</span>
-            ) : (
-              <>
-                <FileText className="w-5 h-5" /> 
-                GỬI LỆNH CHO ĐẠI LÝ AI QUÉT LẠI CV
-              </>
-            )}
+          <button onClick={handleProcess} className="w-full mt-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold text-lg transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20">
+            BẮT ĐẦU PHÂN TÍCH LỘ TRÌNH
           </button>
         )}
 
         {!isScanning && !file && latestRoadmap && (
-          <button 
-            onClick={() => navigate('/roadmap', { state: { roadmapData: latestRoadmap, agentChat: "Chào mừng trở lại! Đây là lộ trình học tập của bạn." } })}
-            className="mt-6 w-full py-4 rounded-xl font-bold text-lg bg-white/10 border border-white/20 hover:bg-white/20 transition-all flex items-center justify-center gap-2"
-          >
-            <Play className="w-5 h-5 text-[var(--color-neon-blue)]" /> 
-            TIẾP TỤC VỚI LỘ TRÌNH GẦN NHẤT
+          <button onClick={() => navigate(`/roadmap/${latestRoadmap._id}`)} className="w-full mt-6 py-4 rounded-xl bg-gray-800 hover:bg-gray-700 font-bold transition-all flex items-center justify-center gap-2">
+            <Play className="w-4 h-4 text-blue-400" /> TIẾP TỤC HỌC TẬP
           </button>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

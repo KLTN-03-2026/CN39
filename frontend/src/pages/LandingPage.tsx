@@ -4,7 +4,7 @@ import { api } from '~/services/api';
 import { useAuth } from '~/context/AuthContext';
 
 interface Template {
-  id: string;
+  slug: string;
   title: string;
   description: string;
   totalPhases: number;

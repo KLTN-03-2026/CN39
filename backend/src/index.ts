@@ -5,6 +5,7 @@ import { databaseMongoClient } from '~/services/database.services';
 import { defaultErrorHandler } from '~/middlewares/errors.middlewares';
 import authRoutes from '~/routes/auth.routes';
 import roadmapRoutes from '~/routes/roadmap.routes';
+import resourceRoutes from '~/routes/resource.routes';
 
 const app = express();
 const port = process.env.PORT;
@@ -21,6 +22,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/roadmaps', roadmapRoutes);
+app.use('/api/resources', resourceRoutes);
 
 app.get('/', (req, res) => {
   res.send('AI Career Roadmap API (refactored) is running...');

@@ -6,7 +6,18 @@ import { wrapAsync } from '~/utils/wrapAsync';
 
 const router = Router();
 
-// Route: POST /api/roadmaps/generate
+// 1. Template Routes (Public or Auth)
+router.get(
+  '/templates',
+  wrapAsync(roadmapController.listTemplates)
+);
+
+router.get(
+  '/preview/:slug',
+  wrapAsync(roadmapController.previewTemplate)
+);
+
+// 2. Generation Routes
 router.post(
   '/generate',
   wrapAsync(authMiddleware),
@@ -14,28 +25,32 @@ router.post(
   wrapAsync(roadmapController.generateFromCV)
 );
 
-// Route: GET /api/roadmaps/latest
+// 3. Instance Routes
 router.get(
   '/latest',
   wrapAsync(authMiddleware),
   wrapAsync(roadmapController.getLatestRoadmap)
 );
 
-// Route: POST /api/roadmaps/chat  (AI Tutor chatbox)
+router.get(
+  '/:id',
+  wrapAsync(authMiddleware),
+  wrapAsync(roadmapController.getById)
+);
+
+// 4. Interaction Routes
 router.post(
   '/chat',
   wrapAsync(authMiddleware),
   wrapAsync(roadmapController.chatWithTutor)
 );
 
-// Route: GET /api/roadmaps/chat/history/:roadmapId/:topic
 router.get(
   '/chat/history/:roadmapId/:topic',
   wrapAsync(authMiddleware),
   wrapAsync(roadmapController.getChatHistory)
 );
 
-// Route: PATCH /api/roadmaps/:roadmapId/topics/:topicId/complete
 router.patch(
   '/:roadmapId/topics/:topicId/complete',
   wrapAsync(authMiddleware),
