@@ -1,23 +1,16 @@
 import { Request, Response } from 'express';
-import { MongoClient } from 'mongodb';
-
-const uri = process.env.MONGODB_URI || '';
-const dbName = process.env.DB_NAME || 'KLTN_AI-Career-RoadMap';
+import { databaseMongoClient } from '~/services/database.services';
 
 export class ResourceController {
   static async listResources(req: Request, res: Response) {
-    const client = new MongoClient(uri);
     try {
       const { q, type, category, page = '0', limit = '20' } = req.query;
       const skip = parseInt(page as string) * parseInt(limit as string);
       const take = parseInt(limit as string);
 
-      await client.connect();
-      const db = client.db(dbName);
-      const collection = db.collection('resources');
+      // Mặc định luôn ẩn các skill roadmap (type = 'roadmap')
+      let query: any = { type: { $ne: 'roadmap' } };
 
-      let query: any = {};
-      
       // Filter by Search Term
       if (q) {
         query.$or = [
@@ -31,18 +24,19 @@ export class ResourceController {
         query.type = { $regex: type, $options: 'i' };
       }
 
-      // Filter by Category (Tags)
+      // Filter by Category (Tags / topic_id)
       if (category && category !== 'all') {
-        if (!query.tags) query.tags = { $in: [] };
-        query.tags.$in.push(new RegExp(category as string, 'i'));
+        query.topic_id = { $regex: category, $options: 'i' };
       }
 
-      const resources = await collection.find(query)
+      const resources = await databaseMongoClient.resources.find(query, {
+        projection: { embedding: 0 } // Ẩn vector embedding dài ngoằng
+      })
         .skip(skip)
         .limit(take)
         .toArray();
 
-      const total = await collection.countDocuments(query);
+      const total = await databaseMongoClient.resources.countDocuments(query);
 
       res.json({
         resources,
@@ -53,8 +47,6 @@ export class ResourceController {
     } catch (error) {
       console.error('List resources error:', error);
       res.status(500).json({ message: 'Internal Server Error' });
-    } finally {
-      await client.close();
     }
   }
 }

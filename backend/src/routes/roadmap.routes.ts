@@ -6,55 +6,29 @@ import { wrapAsync } from '~/utils/wrapAsync';
 
 const router = Router();
 
-// 1. Template Routes (Public or Auth)
-router.get(
-  '/templates',
-  wrapAsync(roadmapController.listTemplates)
-);
+// ═══ Generate ═══
+router.post('/generate', wrapAsync(authMiddleware), uploadCV.single('cv'), wrapAsync(roadmapController.generateFromCV));
 
-router.get(
-  '/preview/:slug',
-  wrapAsync(roadmapController.previewTemplate)
-);
+// ═══ Roadmap CRUD ═══
+router.get('/latest', wrapAsync(authMiddleware), wrapAsync(roadmapController.getLatestRoadmap));
+router.get('/my', wrapAsync(authMiddleware), wrapAsync(roadmapController.getMyRoadmaps));
+router.get('/templates', wrapAsync(roadmapController.listTemplates));
+router.get('/preview/:slug', wrapAsync(roadmapController.previewTemplate));
+router.get('/:id', wrapAsync(authMiddleware), wrapAsync(roadmapController.getById));
 
-// 2. Generation Routes
-router.post(
-  '/generate',
-  wrapAsync(authMiddleware),
-  uploadCV.single('cv'),
-  wrapAsync(roadmapController.generateFromCV)
-);
+// ═══ Skill Roadmap Deep-dive ═══
+router.post('/skill/:slug', wrapAsync(authMiddleware), wrapAsync(roadmapController.createSkillRoadmap));
 
-// 3. Instance Routes
-router.get(
-  '/latest',
-  wrapAsync(authMiddleware),
-  wrapAsync(roadmapController.getLatestRoadmap)
-);
+// ═══ Topic Status ═══
+router.patch('/:roadmapId/topics/:topicSlug/status', wrapAsync(authMiddleware), wrapAsync(roadmapController.updateTopicStatus));
+router.get('/progress/:roadmapId', wrapAsync(authMiddleware), wrapAsync(roadmapController.getProgress));
 
-router.get(
-  '/:id',
-  wrapAsync(authMiddleware),
-  wrapAsync(roadmapController.getById)
-);
+// ═══ Bookmark ═══
+router.patch('/:roadmapId/bookmark/:resourceId', wrapAsync(authMiddleware), wrapAsync(roadmapController.toggleBookmark));
+router.get('/:roadmapId/bookmarks', wrapAsync(authMiddleware), wrapAsync(roadmapController.getBookmarks));
 
-// 4. Interaction Routes
-router.post(
-  '/chat',
-  wrapAsync(authMiddleware),
-  wrapAsync(roadmapController.chatWithTutor)
-);
-
-router.get(
-  '/chat/history/:roadmapId/:topic',
-  wrapAsync(authMiddleware),
-  wrapAsync(roadmapController.getChatHistory)
-);
-
-router.patch(
-  '/:roadmapId/topics/:topicId/complete',
-  wrapAsync(authMiddleware),
-  wrapAsync(roadmapController.completeTopic)
-);
+// ═══ AI Tutor Chat ═══
+router.post('/chat', wrapAsync(authMiddleware), wrapAsync(roadmapController.chatWithTutor));
+router.get('/chat/history/:roadmapId/:topic', wrapAsync(authMiddleware), wrapAsync(roadmapController.getChatHistory));
 
 export default router;

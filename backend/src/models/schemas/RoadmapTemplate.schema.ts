@@ -1,26 +1,12 @@
 import { ObjectId } from 'mongodb';
-import { databaseMongoClient } from '~/services/database.services';
 
-export interface TimelineCardItem {
-  id: string; // The semantic ID like 'topic-internet'
-  title: string;
-  description: string;
-  status: 'COMPLETED' | 'IN_PROGRESS' | 'LOCKED' | 'NOT_STARTED';
-  resources: { title: string, url: string }[];
-  dependencies: string[]; // IDs of items this depends on
-}
-
-export interface TimelinePhase {
-  title: string;
-  level: string; // Beginner | Intermediate | Advanced
-  items: TimelineCardItem[];
-}
-
+// Schema cho collection `roadmap_templates` — Chỉ metadata nhẹ
+// Topics được lưu riêng trong collection `topics` (referenced)
 export default class RoadmapTemplate {
   _id?: ObjectId;
-  slug: string; // Tên file, vd: 'frontend', 'backend'
-  title: string;
-  phases: TimelinePhase[];
+  slug: string;           // "frontend", "backend", "ai-agents"
+  title: string;          // "Frontend Developer"
+  category: 'role' | 'skill';
   createdAt: Date;
   updatedAt: Date;
 
@@ -28,7 +14,7 @@ export default class RoadmapTemplate {
     _id?: ObjectId;
     slug: string;
     title: string;
-    phases: TimelinePhase[];
+    category: 'role' | 'skill';
     createdAt?: Date;
     updatedAt?: Date;
   }) {
@@ -36,7 +22,7 @@ export default class RoadmapTemplate {
     this._id = template._id;
     this.slug = template.slug;
     this.title = template.title;
-    this.phases = template.phases;
+    this.category = template.category;
     this.createdAt = template.createdAt || now;
     this.updatedAt = template.updatedAt || now;
   }

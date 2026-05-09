@@ -1,5 +1,6 @@
 import { pipeline } from '@xenova/transformers';
 import { databaseMongoClient } from '~/services/database.services';
+import { ObjectId } from 'mongodb';
 
 class EmbeddingService {
   private embedder: any = null;
@@ -14,7 +15,7 @@ class EmbeddingService {
     return this.embedder;
   }
 
-  // Chuyển đổi văn bản thuần túy thành Không gian Vector
+  // Chuyển đổi văn bản thành Vector Embedding (384 dimensions)
   public generateEmbedding = async (text: string): Promise<number[]> => {
     try {
       const embedder = await this.getEmbedder();
@@ -26,8 +27,52 @@ class EmbeddingService {
     }
   }
 
+  /**
+   * Tìm resources theo topicOldId — Direct lookup (nhanh, chính xác)
+   * Fallback: Vector search nếu direct lookup không đủ
+   */
+  public searchByTopic = async (query: string, topicOldId: string, limit = 5) => {
+    try {
+      // 1. Direct lookup: Tìm topic → lấy resourceIds → query resources
+      const topic = await databaseMongoClient.topics.findOne({ oldId: topicOldId });
+      let results: any[] = [];
+
+      if (topic && topic.resourceIds?.length > 0) {
+        results = await databaseMongoClient.resources.find(
+          { _id: { $in: topic.resourceIds.map((id: any) => new ObjectId(id)) } },
+          { projection: { embedding: 0 } }
+        ).limit(limit).toArray();
+      }
+
+      // 2. Nếu direct lookup không đủ → bổ sung bằng text search theo topic_id
+      if (results.length < limit && topicOldId) {
+        const textResults = await databaseMongoClient.resources.find(
+          { topic_id: topicOldId, _id: { $nin: results.map(r => r._id) } },
+          { projection: { embedding: 0 } }
+        ).limit(limit - results.length).toArray();
+        results.push(...textResults);
+      }
+
+      // 3. Nếu vẫn thiếu → fallback vector search
+      if (results.length < limit) {
+        const vectorResults = await this.searchResources(query, limit - results.length);
+        const existingIds = new Set(results.map(r => r._id.toString()));
+        for (const vr of vectorResults) {
+          if (!existingIds.has(vr._id.toString())) {
+            results.push(vr);
+          }
+        }
+      }
+
+      return results.slice(0, limit);
+    } catch (error) {
+      console.warn('[RAG] searchByTopic thất bại:', (error as Error).message);
+      return [];
+    }
+  }
+
   // Truy vấn Vector trên MongoDB Atlas (RAG)
-  public searchResources = async (queryText: string, limit = 5) => {
+  public searchResources = async (queryText: string, limit = 3) => {
     try {
       const queryVector = await this.generateEmbedding(queryText);
       
@@ -52,28 +97,6 @@ class EmbeddingService {
       return results;
     } catch (error) {
       console.warn("[RAG] Vector Search thất bại:", (error as Error).message);
-      return [];
-    }
-  }
-
-  // Tìm kiếm tài nguyên theo ngữ cảnh Topic (Context-Aware RAG cho Chatbox)
-  public searchByTopic = async (queryText: string, topicKeyword: string, limit = 5) => {
-    try {
-      const queryVector = await this.generateEmbedding(queryText);
-      
-      // Filter theo topic_id trước, sau đó vector search trong kết quả đó (nếu Atlas hỗ trợ pre-filter)
-      // Hoặc đơn giản là query theo topic_id nếu không muốn dùng vector
-      const results = await databaseMongoClient.resources.find(
-        { topic_id: topicKeyword },
-        { projection: { embedding: 0 }, limit: limit }
-      ).toArray();
-
-      if (results.length > 0) return results;
-
-      // Nếu không tìm thấy theo topic_id, fallback về vector search toàn cục
-      return this.searchResources(queryText, limit);
-    } catch (error) {
-      console.error("Lỗi searchByTopic:", error);
       return [];
     }
   }

@@ -5,6 +5,7 @@ interface UserType {
   email: string;
   fullName: string;
   passwordHash: string;
+  bookmarkedResources?: ObjectId[];
   createdAt?: Date;
 }
 
@@ -13,6 +14,7 @@ export default class User {
   email: string;
   fullName: string;
   passwordHash: string;
+  bookmarkedResources: ObjectId[];
   createdAt: Date;
 
   constructor(user: UserType) {
@@ -20,6 +22,7 @@ export default class User {
     this.email = user.email;
     this.fullName = user.fullName;
     this.passwordHash = user.passwordHash;
+    this.bookmarkedResources = user.bookmarkedResources || [];
     this.createdAt = user.createdAt || new Date();
   }
 }
